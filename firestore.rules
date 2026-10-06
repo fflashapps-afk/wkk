@@ -1,0 +1,289 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global Safety Net (Pillar 1)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidOrderId(id) {
+      return id is string && id.size() == 16 && id.matches('^KD-[0-9]{8}-[0-9]{4}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return (
+        isSignedIn() &&
+        request.auth.token.email_verified == true &&
+        (
+          request.auth.token.email == 'fflashapps@gmail.com' ||
+          exists(/databases/$(database)/documents/admin_users/$(request.auth.uid))
+        )
+      ) || exists(/databases/$(database)/documents/admin_sessions/active);
+    }
+
+    function isValidAdminSession(data) {
+      return data.keys().hasAll(['id', 'code_hash', 'updated_at']) &&
+        data.keys().hasOnly(['id', 'code_hash', 'updated_at']) &&
+        data.id == 'active' &&
+        data.code_hash is string &&
+        data.code_hash == '20092009A' &&
+        data.updated_at == request.time;
+    }
+
+    function isValidStatus(status) {
+      return status is string &&
+        status.size() <= 64 &&
+        status in ["Yangi", "To'lov tekshirilmoqda", "Tasdiqlandi", "Jarayonda", "Bajarildi", "Bekor qilindi"];
+    }
+
+    // Fallback default package validator when admin hasn't modified the package in /products yet
+    function isDefaultPackagePriceValid(productId, diamondAmount, refPrice, sellPrice) {
+      return sellPrice == refPrice - 1 && (
+        (productId == 'ff_weekly_lite' && diamondAmount == 1 && refPrice == 5900) ||
+        (productId == 'ff_110' && diamondAmount == 110 && refPrice == 12200) ||
+        (productId == 'ff_weekly_membership' && diamondAmount == 450 && refPrice == 24200) ||
+        (productId == 'ff_evo_30d' && diamondAmount == 30 && refPrice == 32000) ||
+        (productId == 'ff_341' && diamondAmount == 341 && refPrice == 36800) ||
+        (productId == 'ff_310' && diamondAmount == 310 && refPrice == 44900) ||
+        (productId == 'ff_572' && diamondAmount == 572 && refPrice == 59700) ||
+        (productId == 'ff_monthly_membership' && diamondAmount == 2600 && refPrice == 86400) ||
+        (productId == 'ff_1166' && diamondAmount == 1166 && refPrice == 119900) ||
+        (productId == 'ff_2398' && diamondAmount == 2398 && refPrice == 239900) ||
+        (productId == 'ff_6160' && diamondAmount == 6160 && refPrice == 607500)
+      );
+    }
+
+    function isAuthoritativeProductPriceValid(data) {
+      return (
+        exists(/databases/$(database)/documents/products/$(data.product_id)) &&
+        get(/databases/$(database)/documents/products/$(data.product_id)).data.active == true &&
+        get(/databases/$(database)/documents/products/$(data.product_id)).data.diamond_amount == data.diamond_amount &&
+        get(/databases/$(database)/documents/products/$(data.product_id)).data.reference_price == data.reference_price &&
+        get(/databases/$(database)/documents/products/$(data.product_id)).data.selling_price == data.selling_price
+      ) || (
+        !exists(/databases/$(database)/documents/products/$(data.product_id)) &&
+        isDefaultPackagePriceValid(data.product_id, data.diamond_amount, data.reference_price, data.selling_price)
+      );
+    }
+
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'diamond_amount', 'reference_price', 'selling_price', 'active', 'sort_order', 'updated_at']) &&
+        data.keys().hasOnly(['id', 'name', 'diamond_amount', 'reference_price', 'selling_price', 'active', 'sort_order', 'updated_at']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 64 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        (!('name' in data) || (data.name is string && data.name.size() >= 1 && data.name.size() <= 80)) &&
+        data.diamond_amount is int && data.diamond_amount > 0 && data.diamond_amount <= 1000000 &&
+        data.reference_price is int && data.reference_price >= 100 && data.reference_price <= 100000000 &&
+        data.selling_price is int && data.selling_price == data.reference_price - 1 &&
+        data.active is bool &&
+        data.sort_order is int && data.sort_order >= 0 && data.sort_order <= 10000 &&
+        data.updated_at == request.time;
+    }
+
+    function isValidPaymentSettings(data) {
+      return data.keys().hasAll(['card_number', 'card_holder', 'instructions', 'updated_at']) &&
+        data.keys().hasOnly(['card_number', 'card_holder', 'instructions', 'updated_at']) &&
+        data.card_number is string && data.card_number.size() >= 4 && data.card_number.size() <= 32 &&
+        data.card_holder is string && data.card_holder.size() >= 2 && data.card_holder.size() <= 120 &&
+        data.instructions is string && data.instructions.size() >= 2 && data.instructions.size() <= 500 &&
+        data.updated_at == request.time;
+    }
+
+    function isValidTelegramOperator(data) {
+      return data.keys().hasAll(['id', 'label', 'username', 'active', 'sort_order', 'updated_at']) &&
+        data.keys().hasOnly(['id', 'label', 'username', 'active', 'sort_order', 'updated_at']) &&
+        data.id is string && data.id.size() >= 1 && data.id.size() <= 64 && data.id.matches('^[a-zA-Z0-9_\\-]+$') &&
+        data.label is string && data.label.size() >= 1 && data.label.size() <= 64 &&
+        data.username is string && data.username.size() >= 2 && data.username.size() <= 64 && data.username.matches('^[a-zA-Z0-9_]+$') &&
+        data.active is bool &&
+        data.sort_order is int && data.sort_order >= 0 && data.sort_order <= 1000 &&
+        data.updated_at == request.time;
+    }
+
+    function isValidOrder(data) {
+      return data.keys().hasAll([
+          'id', 'order_number', 'game', 'game_id', 'product_id',
+          'diamond_amount', 'reference_price', 'selling_price',
+          'payment_screenshot_url', 'status', 'telegram_operator',
+          'created_at', 'updated_at'
+        ]) &&
+        data.keys().hasOnly([
+          'id', 'order_number', 'game', 'game_id', 'product_id', 'product_name',
+          'diamond_amount', 'reference_price', 'selling_price',
+          'payment_screenshot_url', 'status', 'telegram_operator',
+          'created_at', 'updated_at'
+        ]) &&
+        isValidOrderId(data.id) &&
+        data.order_number == data.id &&
+        data.game is string && data.game == 'Free Fire' && data.game.size() <= 32 &&
+        data.game_id is string && data.game_id.size() >= 5 && data.game_id.size() <= 16 && data.game_id.matches('^[0-9]{5,16}$') &&
+        isValidId(data.product_id) &&
+        (!('product_name' in data) || (data.product_name is string && data.product_name.size() >= 1 && data.product_name.size() <= 80)) &&
+        data.diamond_amount is int && data.diamond_amount > 0 && data.diamond_amount <= 1000000 &&
+        data.reference_price is int && data.reference_price >= 100 && data.reference_price <= 100000000 &&
+        data.selling_price is int && data.selling_price == data.reference_price - 1 &&
+        data.payment_screenshot_url is string && data.payment_screenshot_url.size() >= 30 && data.payment_screenshot_url.size() <= 900000 &&
+        data.payment_screenshot_url.matches('^data:image/(jpeg|jpg|png|webp);base64,[a-zA-Z0-9+/=]+$') &&
+        isValidStatus(data.status) &&
+        data.telegram_operator is string && data.telegram_operator.size() >= 1 && data.telegram_operator.size() <= 64 &&
+        data.created_at is timestamp &&
+        data.updated_at is timestamp;
+    }
+
+    function isValidOrderTracking(data) {
+      return data.keys().hasAll([
+          'order_number', 'game', 'game_id', 'diamond_amount',
+          'selling_price', 'status', 'telegram_operator',
+          'created_at', 'updated_at'
+        ]) &&
+        data.keys().hasOnly([
+          'order_number', 'game', 'game_id', 'product_name', 'diamond_amount',
+          'selling_price', 'status', 'telegram_operator',
+          'created_at', 'updated_at'
+        ]) &&
+        isValidOrderId(data.order_number) &&
+        data.game is string && data.game == 'Free Fire' && data.game.size() <= 32 &&
+        data.game_id is string && data.game_id.size() >= 5 && data.game_id.size() <= 16 && data.game_id.matches('^[0-9]{5,16}$') &&
+        (!('product_name' in data) || (data.product_name is string && data.product_name.size() >= 1 && data.product_name.size() <= 80)) &&
+        data.diamond_amount is int && data.diamond_amount > 0 && data.diamond_amount <= 1000000 &&
+        data.selling_price is int && data.selling_price >= 99 && data.selling_price <= 100000000 &&
+        isValidStatus(data.status) &&
+        data.telegram_operator is string && data.telegram_operator.size() >= 1 && data.telegram_operator.size() <= 64 &&
+        data.created_at is timestamp &&
+        data.updated_at is timestamp;
+    }
+
+    function isValidAdminUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'created_at']) &&
+        data.keys().hasOnly(['uid', 'email', 'role', 'created_at']) &&
+        isValidId(data.uid) &&
+        data.email is string && data.email.size() >= 3 && data.email.size() <= 160 &&
+        data.role is string && data.role == 'admin' && data.role.size() <= 32 &&
+        data.created_at == request.time;
+    }
+
+    // Connection test endpoint
+    match /test/{docId} {
+      allow get: if isValidId(docId);
+      allow list, create, update, delete: if false;
+    }
+
+    // Admin Code Session lock
+    match /admin_sessions/{sessionId} {
+      allow get: if isValidId(sessionId) && sessionId == 'active';
+      allow list: if false;
+      allow create, update: if isValidId(sessionId) && sessionId == 'active' && isValidAdminSession(incoming());
+      allow delete: if isValidId(sessionId) && sessionId == 'active';
+    }
+
+    // Products: Public read so customers can view active packages; Admin write
+    match /products/{productId} {
+      allow get: if isValidId(productId);
+      allow list: if resource.data.active == true || isAdmin();
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) && incoming().id == productId;
+      allow update: if isAdmin() && isValidId(productId) && isValidProduct(incoming()) && incoming().id == existing().id;
+      allow delete: if isAdmin() && isValidId(productId);
+    }
+
+    // Payment Settings: Public get on 'default' document for checkout card display; Admin write
+    match /payment_settings/{settingId} {
+      allow get: if isValidId(settingId) && settingId == 'default';
+      allow list: if isAdmin();
+      allow create, update: if isAdmin() && isValidId(settingId) && settingId == 'default' && isValidPaymentSettings(incoming());
+      allow delete: if false;
+    }
+
+    // Telegram Operators: Public read for operator buttons; Admin write
+    match /telegram_operators/{operatorId} {
+      allow get: if isValidId(operatorId);
+      allow list: if resource.data.active == true || isAdmin();
+      allow create: if isAdmin() && isValidId(operatorId) && isValidTelegramOperator(incoming()) && incoming().id == operatorId;
+      allow update: if isAdmin() && isValidId(operatorId) && isValidTelegramOperator(incoming()) && incoming().id == existing().id;
+      allow delete: if isAdmin() && isValidId(operatorId);
+    }
+
+    // Full Orders (with payment screenshot): Public create with strict product price validation; Admin-only read/update/delete
+    match /orders/{orderId} {
+      allow get: if isAdmin() && isValidOrderId(orderId);
+      allow list: if isAdmin();
+      allow create: if isValidOrderId(orderId) &&
+        isValidOrder(incoming()) &&
+        incoming().id == orderId &&
+        incoming().status in ["Yangi", "To'lov tekshirilmoqda"] &&
+        incoming().created_at == request.time &&
+        incoming().updated_at == request.time &&
+        isAuthoritativeProductPriceValid(incoming()) &&
+        existsAfter(/databases/$(database)/documents/order_tracking/$(orderId));
+      allow update: if isValidOrderId(orderId) &&
+        isValidOrder(incoming()) &&
+        incoming().id == existing().id &&
+        incoming().order_number == existing().order_number &&
+        incoming().created_at == existing().created_at &&
+        incoming().updated_at == request.time &&
+        (
+          isAdmin() ||
+          (
+            !(existing().status in ["Bajarildi", "Bekor qilindi"]) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['telegram_operator', 'updated_at']) &&
+            getAfter(/databases/$(database)/documents/order_tracking/$(orderId)).data.telegram_operator == incoming().telegram_operator
+          )
+        );
+      allow delete: if isAdmin() && isValidOrderId(orderId);
+    }
+
+    // Sanitized Order Tracking (no payment screenshot): Exact-ID get only; no public list
+    match /order_tracking/{orderId} {
+      allow get: if isValidOrderId(orderId);
+      allow list: if isAdmin();
+      allow create: if isValidOrderId(orderId) &&
+        isValidOrderTracking(incoming()) &&
+        incoming().order_number == orderId &&
+        incoming().status in ["Yangi", "To'lov tekshirilmoqda"] &&
+        incoming().created_at == request.time &&
+        incoming().updated_at == request.time &&
+        existsAfter(/databases/$(database)/documents/orders/$(orderId)) &&
+        getAfter(/databases/$(database)/documents/orders/$(orderId)).data.game_id == incoming().game_id &&
+        getAfter(/databases/$(database)/documents/orders/$(orderId)).data.diamond_amount == incoming().diamond_amount &&
+        getAfter(/databases/$(database)/documents/orders/$(orderId)).data.selling_price == incoming().selling_price &&
+        getAfter(/databases/$(database)/documents/orders/$(orderId)).data.status == incoming().status;
+      allow update: if isValidOrderId(orderId) &&
+        isValidOrderTracking(incoming()) &&
+        incoming().order_number == existing().order_number &&
+        incoming().created_at == existing().created_at &&
+        incoming().updated_at == request.time &&
+        (
+          isAdmin() ||
+          (
+            !(existing().status in ["Bajarildi", "Bekor qilindi"]) &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['telegram_operator', 'updated_at']) &&
+            getAfter(/databases/$(database)/documents/orders/$(orderId)).data.telegram_operator == incoming().telegram_operator
+          )
+        );
+      allow delete: if isAdmin() && isValidOrderId(orderId);
+    }
+
+    // Admin Users directory
+    match /admin_users/{adminUid} {
+      allow get: if isAdmin() && isValidId(adminUid);
+      allow list: if isAdmin();
+      allow create: if isAdmin() && isValidId(adminUid) && isValidAdminUser(incoming()) && incoming().uid == adminUid;
+      allow update: if isAdmin() && isValidId(adminUid) && isValidAdminUser(incoming()) && incoming().uid == existing().uid && incoming().created_at == existing().created_at;
+      allow delete: if isAdmin() && isValidId(adminUid);
+    }
+  }
+}

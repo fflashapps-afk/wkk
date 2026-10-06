@@ -1,0 +1,6 @@
+{
+  "name": "KAWAIDONATE — Free Fire Almaz va Donat Platformasi",
+  "description": "Free Fire uchun tezkor va qulay almaz donat xizmati. So'mda to'lov, buyurtma ID orqali kuzatish va Telegram orqali tasdiqlash.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

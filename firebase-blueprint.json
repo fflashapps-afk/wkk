@@ -1,0 +1,283 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Free Fire diamond package with reference price and calculated selling price.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "diamond_amount": {
+          "type": "number",
+          "description": "Amount of Free Fire diamonds (Almaz)"
+        },
+        "reference_price": {
+          "type": "number",
+          "description": "Official/reference price in UZS"
+        },
+        "selling_price": {
+          "type": "number",
+          "description": "KAWAIDONATE selling price in UZS (reference_price - 1)"
+        },
+        "active": {
+          "type": "boolean",
+          "description": "Whether the package is available for purchase"
+        },
+        "sort_order": {
+          "type": "number",
+          "description": "Display sort order"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "diamond_amount", "reference_price", "selling_price", "active", "sort_order", "updated_at"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Private full order record for admin management.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^KD-[0-9]{8}-[0-9]{4}$"
+        },
+        "order_number": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^KD-[0-9]{8}-[0-9]{4}$"
+        },
+        "game": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "game_id": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 16,
+          "pattern": "^[0-9]{5,16}$"
+        },
+        "product_id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "diamond_amount": {
+          "type": "number"
+        },
+        "reference_price": {
+          "type": "number"
+        },
+        "selling_price": {
+          "type": "number"
+        },
+        "payment_screenshot_url": {
+          "type": "string",
+          "maxLength": 900000,
+          "description": "Securely stored payment receipt image data URI"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Yangi", "To'lov tekshirilmoqda", "Tasdiqlandi", "Jarayonda", "Bajarildi", "Bekor qilindi"],
+          "maxLength": 64
+        },
+        "telegram_operator": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "order_number",
+        "game",
+        "game_id",
+        "product_id",
+        "diamond_amount",
+        "reference_price",
+        "selling_price",
+        "payment_screenshot_url",
+        "status",
+        "telegram_operator",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "OrderTracking": {
+      "title": "OrderTracking",
+      "description": "Sanitized order tracking status summary accessible only by exact order number.",
+      "type": "object",
+      "properties": {
+        "order_number": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^KD-[0-9]{8}-[0-9]{4}$"
+        },
+        "game": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "game_id": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 16,
+          "pattern": "^[0-9]{5,16}$"
+        },
+        "diamond_amount": {
+          "type": "number"
+        },
+        "selling_price": {
+          "type": "number"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["Yangi", "To'lov tekshirilmoqda", "Tasdiqlandi", "Jarayonda", "Bajarildi", "Bekor qilindi"],
+          "maxLength": 64
+        },
+        "telegram_operator": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "order_number",
+        "game",
+        "game_id",
+        "diamond_amount",
+        "selling_price",
+        "status",
+        "telegram_operator",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "PaymentSettings": {
+      "title": "PaymentSettings",
+      "description": "Administrator configured payment card and instructions.",
+      "type": "object",
+      "properties": {
+        "card_number": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "card_holder": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "instructions": {
+          "type": "string",
+          "maxLength": 500
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["card_number", "card_holder", "instructions", "updated_at"]
+    },
+    "TelegramOperator": {
+      "title": "TelegramOperator",
+      "description": "Telegram confirmation operator profile.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "label": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "username": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_]+$"
+        },
+        "active": {
+          "type": "boolean"
+        },
+        "sort_order": {
+          "type": "number"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["id", "label", "username", "active", "sort_order", "updated_at"]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized admin user record.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "role": {
+          "type": "string",
+          "enum": ["admin"],
+          "maxLength": 32
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["uid", "email", "role", "created_at"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": { "$ref": "#/entities/Product" },
+      "description": "Free Fire diamond packages"
+    },
+    "/orders/{orderId}": {
+      "schema": { "$ref": "#/entities/Order" },
+      "description": "Full private orders with payment screenshots (admin read/update only)"
+    },
+    "/order_tracking/{orderId}": {
+      "schema": { "$ref": "#/entities/OrderTracking" },
+      "description": "Sanitized order tracking status documents (get by exact order number only, no list)"
+    },
+    "/payment_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/PaymentSettings" },
+      "description": "Admin-managed payment card configuration"
+    },
+    "/telegram_operators/{operatorId}": {
+      "schema": { "$ref": "#/entities/TelegramOperator" },
+      "description": "Admin-managed Telegram operators (@SHLOFF, @shrpvabu)"
+    },
+    "/admin_users/{adminUid}": {
+      "schema": { "$ref": "#/entities/AdminUser" },
+      "description": "Authorized administrator directory"
+    }
+  }
+}
