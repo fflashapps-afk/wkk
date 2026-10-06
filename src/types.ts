@@ -241,6 +241,8 @@ export function formatTimestamp(ts: unknown): string {
   return 'Hozirgina';
 }
 
+export const PUBLIC_SITE_URL = 'https://kawaidonate.vercel.app/';
+
 export function buildTelegramOrderMessage(params: {
   orderNumber: string;
   gameId: string;
@@ -251,8 +253,6 @@ export function buildTelegramOrderMessage(params: {
 }): string {
   const formattedPrice = new Intl.NumberFormat('ru-RU').format(params.sellingPrice).replace(/\s/g, ',');
   const label = params.productName || `${params.diamondAmount}`;
-  const checkLine = params.receiptUrl
-    ? `To'lov cheki (Rasm): ${params.receiptUrl}`
-    : `To'lov cheki: yuklangan`;
-  return `KAWAIDONATE BUYURTMA\n\nBuyurtma raqami: ${params.orderNumber}\nGame ID: ${params.gameId}\nAlmaz: ${label}\nSumma: ${formattedPrice} so'm\n\n${checkLine}\n\nKAWAIDONATE`;
+  const checkUrl = params.receiptUrl || 'https://kawaidonate.vercel.app/';
+  return `KAWAIDONATE BUYURTMA\n\nBuyurtma raqami: ${params.orderNumber}\nGame ID: ${params.gameId}\nAlmaz: ${label}\nSumma: ${formattedPrice} so'm\n\nTo'lov cheki: ${checkUrl}\n\nKAWAIDONATE`;
 }

@@ -351,23 +351,16 @@ export const DonateFlowView: React.FC<DonateFlowViewProps> = ({
         // Fallback to raw screenshotDataUrl
       }
 
-      let generatedReceiptUrl = '';
       try {
-        const rResp = await fetch('/api/receipts/store', {
+        await fetch('/api/receipts/store', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ dataUrl: compositeDataUrlToStore }),
         });
-        if (rResp.ok) {
-          const rData = await rResp.json();
-          if (rData.path) {
-            generatedReceiptUrl = `${window.location.origin}${rData.path}`;
-            setReceiptPublicUrl(generatedReceiptUrl);
-          }
-        }
       } catch {
         // Non-blocking
       }
+      setReceiptPublicUrl('https://kawaidonate.vercel.app/');
 
       const defaultOp = operators[0]?.username ? `@${operators[0].username}` : '@SHLOFF';
       const initialStatus: OrderStatus = "To'lov tekshirilmoqda";

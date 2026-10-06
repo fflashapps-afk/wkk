@@ -68,8 +68,15 @@ export default function App() {
     }, 3500);
   };
 
-  // Auth listener
+  // Auth listener & URL query param check (?order=KD-...)
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const orderParam = params.get('order') || params.get('chek');
+    if (orderParam && /^KD-[0-9]{8}-[0-9]{4}$/i.test(orderParam.trim())) {
+      setTrackingOrderNumber(orderParam.trim().toUpperCase());
+      setCurrentView('check');
+    }
+
     const savedSession = sessionStorage.getItem('kawaidonate_admin_unlocked');
     if (savedSession === 'true') {
       setIsAdmin(true);
