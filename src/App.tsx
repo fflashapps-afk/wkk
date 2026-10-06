@@ -165,19 +165,24 @@ export default function App() {
 
     setVerifyingCode(true);
     try {
-      const resp = await fetch('/api/admin/verify-code', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: trimmed }),
-      });
-
-      if (!resp.ok) {
-        setAdminCodeError("Maxfiy kod noto'g'ri!");
-        setVerifyingCode(false);
-        return;
+      // Optional backend check when running on full-stack Express server; non-blocking on Vercel static hosting
+      try {
+        const resp = await fetch('/api/admin/verify-code', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: trimmed }),
+        });
+        if (resp.status === 401) {
+          setAdminCodeError("Maxfiy kod noto'g'ri!");
+          setVerifyingCode(false);
+          return;
+        }
+      } catch {
+        // Ignore network/404 errors on static hosting (Vercel) and verify directly via Firestore rules below
       }
 
-      // Activate Firestore admin session lock so Firestore rules permit admin operations
+      // Authoritative check: Firestore security rules strictly enforce `data.code_hash == '20092009A'`
+      // If the code is wrong, Firestore rejects this setDoc with permission-denied!
       await setDoc(doc(db, 'admin_sessions', 'active'), {
         id: 'active',
         code_hash: trimmed,
@@ -191,7 +196,7 @@ export default function App() {
       setCurrentView('admin');
       showToast('Admin panel ochildi!', 'success');
     } catch {
-      setAdminCodeError("Maxfiy kodni tekshirishda xatolik yuz berdi.");
+      setAdminCodeError("Maxfiy kod noto'g'ri!");
     } finally {
       setVerifyingCode(false);
     }
